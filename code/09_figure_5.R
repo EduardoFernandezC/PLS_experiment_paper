@@ -1,12 +1,34 @@
-# Rainbow plot 2.0 ####
+library(tidyverse)
 
-# This script uses the elements generated in the script '01_PLS_pheno_apple_all_data.R'. I did not
-# source it since it will produce the plots again. Make sure it runs until line 160 (skipping the
-# lines where the plots are saved to disk). The code below should do the job
-
-eval(parse(text = readLines("code/seasons_1_2/01_PLS_pheno_apple_all_data.R", n = 163)))
 
 # Apple plot
+
+# Generate the ordered treatments vector
+
+weather_data_hourly <- read.csv("data/weather_data_hourly.csv")
+
+# Compute chill and heat for the period
+
+temperature_responses <-  weather_data_hourly %>% group_by(Treatment) %>% 
+  
+  filter(JDay %in% c(274 : 365, 1 : 91)) %>% summarise(CPs = max(chillR::Dynamic_Model(Temp)),
+                                                       GDHs = max(chillR::GDH(Temp)))
+
+# Order the treatments by chill accumulation (low chill to high chill)
+
+ordered_treatments <- temperature_responses[order(temperature_responses$CPs), "Treatment"][[1]]
+
+# Retain only the treatments used in apple
+
+ordered_treatments_apple <- ordered_treatments[which(ordered_treatments != 67)]
+
+
+
+# Read the phenology and weather data
+
+bio_data_all_apple <- read.csv("data/bio_data_apple.csv")
+
+weather_data_all_apple <- read.csv("data/weather_data_daily_apple.csv")
 
 # This time, I will include only some treatments
 
@@ -20,7 +42,7 @@ all_data <- NULL
 for (range in ranges){
 
 bio_data_all <- filter(bio_data_original, Treatment %in% 
-                         ordered_treatments_all[eval(parse(text = range))])
+                         ordered_treatments_apple[eval(parse(text = range))])
 
 
 # Change the type of bio_data_all$Treatment
@@ -30,7 +52,7 @@ bio_data_all$Treatment <- as.numeric(bio_data_all$Treatment)
 # Select the weather data
 
 weather_data_all <- filter(wather_data_original, Treatment %in% 
-                             ordered_treatments_all[eval(parse(text = range))])
+                             ordered_treatments_apple[eval(parse(text = range))])
 
 # Add the YEARMODA column to the weather data frame
 
@@ -176,10 +198,24 @@ if (range == ranges[1]) pheno_apple <- mean_temp_phase else
 
 # Pear ====
 
-# Read the first lines of the PLS_pear script to get the weather data
+# Define the ordered treatment vector for pear
 
-eval(parse(text = readLines("code/seasons_1_2/02_PLS_pheno_pear_all_data.R", n = 144)))
+ordered_treatments_pear <- ordered_treatments[which(ordered_treatments %in% c(1 :16, 34 : 46, 59, 63, 67))]
 
+# Modify the name of the treatments for further compatibility
+
+ordered_treatments_pear[which(ordered_treatments_pear %in% c(34 : 46, 59, 63, 67))] <- 
+  
+  ordered_treatments_pear[which(ordered_treatments_pear %in% c(34 : 46, 59, 63, 67))] - 17
+
+
+ordered_treatments_pear[which(ordered_treatments_pear %in% c(42, 46, 50))] <- 30 : 32
+
+# Read the pheno and weather data for pear
+
+bio_data_all_pear <- read.csv("data/bio_data_pear.csv")
+
+weather_data_all_pear <- read.csv("data/weather_data_daily_pear.csv")
 
 # This time, I will include only some treatments
 
@@ -193,7 +229,7 @@ all_data_pear <- NULL
 for (range in ranges){
   
   bio_data_all <- filter(bio_data_original_pear, Treatment %in% 
-                           ordered_treatments_all[eval(parse(text = range))])
+                           ordered_treatments_pear[eval(parse(text = range))])
   
   # Change the type of bio_data_all$Treatment
   
@@ -203,7 +239,7 @@ for (range in ranges){
   # Select the weather data
   
   weather_data_all <- filter(wather_data_original_pear, Treatment %in% 
-                               ordered_treatments_all[eval(parse(text = range))])
+                               ordered_treatments_pear[eval(parse(text = range))])
   
   
   # Add the YEARMODA column to the weather data frame
@@ -423,7 +459,7 @@ ggplot(apple_and_pear, aes(Chilling, Forcing)) +
         strip.background = element_blank(),
         strip.placement = "inside")
 
-ggsave("figures/rainbow_apple_pear_2.png", device = "png", height = 20, width = 17.7, units = "cm",
+ggsave("figures/figure_5.png", device = "png", height = 20, width = 17.7, units = "cm",
        dpi = 600)
 
 
